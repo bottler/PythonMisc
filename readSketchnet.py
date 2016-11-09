@@ -19,10 +19,11 @@ ns = {"i":"http://www.w3.org/2000/svg"}
 
 #parses a file to produce a big list of all the path data
 def fileToData(filename):
-    num=r"(\d+(\.\d+)?)"
-    straight="M{0} {0} L{0} {0} ".format(num)
-    curve = "M{0} {0} (C{0} {0} {0} {0} {0} {0} )+".format(num)
-    curvepiece = "C{0} {0} {0} {0} {0} {0} ".format(num)
+    num=r"(-?\d+(\.\d+)?)"
+    straight="M{0}[, ]{0} ?L{0}[, ]{0} ?".format(num)
+    curve = "M{0}[, ]{0} ?(C{0}[, ]{0} {0}[, ]{0} {0}[, ]{0} ?)+".format(num)
+    #note that curvepiece ends with a greedy +, we are relying on this working
+    curvepiece = "C{0}[, ]{0} {0}[, ]{0} {0}[, ]{0}".format(num)
 
     r = ET.parse(filename)
     g = r.find("i:g",ns).find("i:g",ns)
@@ -50,7 +51,7 @@ def fileToData(filename):
                 #print (text,"\n", startpt,curvedata)
                 out.append(("C",startpt,curvedata)) #C just for convenience
             else:
-                raise RuntimeError("Unexpected path string: "+text)
+                raise RuntimeError("Unexpected path string: '"+text+"'")
     return out
 
 
