@@ -5,12 +5,13 @@ I usually find that I present data to the model in blocks, which usually contain
 
 #Using from training code
 Two functions are provided which are called by the training routine:
-*results.startRun
+
+### `results.startRun`
 This is called before any training, and stores information about the run for future reference. It also creates the database file (by default `results.sqlite`) if it doesn't exist.
 
 The supplied information I store for each run are pretty much the arguments of this function and the columns of the table RUNS. Exception: `callerFilePath` is a list of filenames whose contents we store - e.g. the code. I use the nonemptiness of `continuation` to indicate that the model was not trained from scratch, but from the saved weights of the previous run. `architecture` and `solver` are basically assumed in diffRuns and describeRun to be long JSON strings. You can change any of this.
 
-*results.step
+### `results.step`
 This stores the reported training and test objective and accuracy from each step of training.
 These are stored in the STEPS table.
 The time for the first 10 steps is remembered in the steps table.
@@ -23,7 +24,7 @@ results = require 'results'
 Only one process should modify the database at any one time; you cannot train two models to the same database. But you can have as many processes as you like connected to the database and using the query functions, even during training.
 
 #Using the results
-I usually have an alias like 'ipython -i -c "import numpy as np; import results as r"'.
+I usually have an alias like `ipython -i -c "import numpy as np; import results as r"`.
 The following functions are easy to use analysis functions.
 * `r.runList()` and `r.runList2()` provide summaries of all the runs.
 * `r.plotRun(x)` draws a graph of the training of the xth run
