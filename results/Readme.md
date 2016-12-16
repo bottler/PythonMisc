@@ -6,12 +6,12 @@ I usually find that I present data to the model in blocks, which usually contain
 #Using from training code
 Two functions are provided which are called by the training routine:
 
-### `results.startRun`
+#### `results.startRun`
 This is called before any training, and stores information about the run for future reference. It also creates the database file (by default `results.sqlite`) if it doesn't exist.
 
 The supplied information I store for each run are pretty much the arguments of this function and the columns of the table RUNS. Exception: `callerFilePath` is a list of filenames whose contents we store - e.g. the code. I use the nonemptiness of `continuation` to indicate that the model was not trained from scratch, but from the saved weights of the previous run. `architecture` and `solver` are basically assumed in diffRuns and describeRun to be long JSON strings. You can change any of this.
 
-### `results.step`
+#### `results.step`
 This stores the reported training and test objective and accuracy from each step of training.
 These are stored in the STEPS table.
 The time for the first 10 steps is remembered in the steps table.
@@ -35,6 +35,7 @@ The following functions are easy to use analysis functions.
 * `r.steps(x)` prints a table of all the steps
 * `r.lastSteps()` prints a table of all the steps of the latest (e.g. current) run
 * `r.l()` is a very small summary of whether the latest (e.g. current) run is making progress.
+
 It can be desirable to take moving averages of the accuracy and error. Only `runList2` does this by default.
 
 At the moment whether to draw graphs on screen or to file is determined by the `oncampus` module in this repo. This will want modifying for other users, as well as the file location used (in `pushplot`).
