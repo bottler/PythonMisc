@@ -1,5 +1,5 @@
 # PythonMisc
-Some standalone python scripts
+Some fairly standalone python scripts
 
 * readSketchnet: tool to read data from the sketch-a-net dataset http://cybertron.cg.tu-berlin.de/eitz/projects/classifysketch/
 
@@ -10,3 +10,5 @@ Some standalone python scripts
 * tinisMultiRun: script for parallelizing another script across the 4 GPUs you get on tinis
 
 * tinisDummyProgram: a demo program for tinisMultiRun
+
+* results: code for managing results of long neural network training runs
