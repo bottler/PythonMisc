@@ -247,10 +247,14 @@ def l(): #prints the most important things to know about the current long-runnin
         #we could take more care of nans here
         r = lambda x : round(x,4) if x is not None else "NAN?"
         return (name,r(m(t)),r(ar(t)/(len(a)-1.0)),r(m(t[:len(a)//2])))
+    teo_=replaceSeriesWithMovingAverage_(teo,movingAvgLength,True)
+    tea_=replaceSeriesWithMovingAverage_(tea,movingAvgLength,False)   
     d=[v("trainObj",tro,1),
        v("trainAcc",tra,0),
        v( "testObj",teo,1),
-       v( "testAcc",tea,0)]
+       v( "testAcc",tea,0),
+       v( "testObj_Avg",teo_,1),
+       v( "testAcc_Avg",tea_,0)]
     print (tabulate.tabulate(d, headers=("","best","bestIsWhere","firstHalf")))
 
 #could provide more here
