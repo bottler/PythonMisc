@@ -24,14 +24,14 @@ else:
 nrun = 0
 nsteps = 0
 starttime = 0
+oldColumns = True
 
 #todo - be flexible about the results column
 #     - keep a global variable of their names, prettyname, bigIsGood
 
 
-def startRun(repnname, repnlength, continuation, batchTr, batchTe, layertype, layers, width, architecture, solver, callerFilePath):
+def startRun(continuation, attribs, architecture, solver, callerFilePath):
     global nrun
-    global starttime
     global filecontents
     filecontents=""
     if callerFilePath is not None:
@@ -44,32 +44,43 @@ def startRun(repnname, repnlength, continuation, batchTr, batchTe, layertype, la
                 getC(f)
         else:
             getC(callerFilePath)
-    setup=["create table if not exists RUNS(COUNT INTEGER PRIMARY KEY, TIME TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL, REPN TEXT, REPNLENGTH INT, CONTINUATION TEXT, BATCHTR INT, BATCHTE INT, LAYERTYPE TEXT, LAYERS INT, WIDTH INT, ARCHITECTURE TEXT, SOLVER TEXT, CODE TEXT)",         #these default keys start at 1
+    runColList="(COUNT INTEGER PRIMARY KEY, TIME TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL, REPN TEXT, REPNLENGTH INT, CONTINUATION TEXT, BATCHTR INT, BATCHTE INT, LAYERTYPE TEXT, LAYERS INT, WIDTH INT, ARCHITECTURE TEXT, SOLVER TEXT, CODE TEXT)"
+    if not oldColumns:
+        runColList="(COUNT INTEGER PRIMARY KEY, TIME TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL, CONTINUATION TEXT, ARCHITECTURE TEXT, SOLVER TEXT, CODE TEXT)"
+    setup=["create table if not exists RUNS"+runColList,#these default keys start at 1
            "create table if not exists STEPS(STEP INTEGER PRIMARY KEY, RUN int, OBJECTIVE real, TRAINACC real, TESTOBJECTIVE real, TESTACC REAL )",
-           "create table if not exists TIMES(RUN INT, TIME real)" # stores the time of the tenth step of each run, allowing speed to be measured
+           "create table if not exists TIMES(RUN INT, TIME real)", # stores the time of the tenth step of each run, allowing speed to be measured
+           "create table if not exists ATTRIBS(RUN INT, NAME TEXT, ISRESULT INT, VALUE TEXT)"
        ]
-    infoquery = "insert into RUNS (REPN, REPNLENGTH, CONTINUATION, BATCHTR, BATCHTE, LAYERTYPE, LAYERS, WIDTH, ARCHITECTURE, SOLVER, CODE) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
-    info = (repnname, repnlength, continuation, batchTr, batchTe, layertype, layers, width, architecture, solver, filecontents)
+    infoquery = "insert into RUNS (CONTINUATION, ARCHITECTURE, SOLVER, CODE) VALUES (?,?,?,?)"
+    info = (continuation, architecture, solver, filecontents)
+    attribquery = "insert into ATTRIBS(RUN, NAME, ISRESULT, VALUE) VALUES (?,?,0,?)"
     if useCPP:
         for s in setup:
             report.resultless(s)
         report.sink(infoquery,info)
         nrun = report.lastRow()
+        for k,v in sorted(attribs.items()):
+            report.sink(attribquery,(nrun,k,v))
     else:
         c = con.cursor()
         for s in setup:
             c.execute(s)
         c.execute(infoquery, info)
         nrun = c.lastrowid
+        c.executemany(attribquery,[([nrun]+list(i)) for i in sorted(attribs.items())])
         con.commit()
-    starttime = datetime.datetime.now()
 
 #store elapsed time with each step?
+#We store the time taken for 10 steps, but actually we count steps 2 to 11, because if you use
+#keras the first step may include some of the compilation
 def step(obj, train, objte, test):
-    global nsteps
+    global nsteps, starttime
     q = [("insert into steps values (NULL, ?, ?, ?, ?, ?)",(nrun,obj,train,objte,test))]
     nsteps = 1 + nsteps
-    if nsteps == 10:
+    if nsteps == 1:
+        starttime = datetime.datetime.now()
+    if nsteps == 11:
         #c.execute("insert into TIMES (RUN) VALUES (?)", (nrun,))
         q.append(("insert into TIMES VALUES (?,?)", (nrun, (datetime.datetime.now()-starttime).total_seconds())))
 
@@ -82,6 +93,17 @@ def step(obj, train, objte, test):
             c.execute(sql,data)
         con.commit()  
 
+def addResultAttribute(name, value):
+    q=[("insert into ATTRIBS(RUN, NAME, ISRESULT, VALUE) VALUES (?,?,1,?)",(nrun, name, value))]
+    c=con.cursor()
+    if True:
+        count = c.execute("select count(*) from ATTRIBS where run = ? and name = ?",(nrun,name)).fetchone()[0]
+        if count>0:
+            raise RuntimeError("attribute already set:",name)
+    for sql, data in q:
+        c.execute(sql,data)
+    con.commit()     
+        
 def signoff():
     con.close()
     
@@ -116,7 +138,12 @@ def pushplot(plt,title=""):
         plt.savefig("/home/jeremyr/Dropbox/phd/graphs/"+time.strftime("%Y%m%d-%H%M%S")+title)
         plt.close()
     else:
-        plt.show()
+        multiwindow=False
+        if multiwindow:#multiple graphs, non blocking
+            plt.show(block=False)
+            plt.figure()
+        else:
+            plt.show()
  
 def runList():
     c=con.cursor()
@@ -132,12 +159,33 @@ def runList():
 
 def runList1():
     c=con.cursor()
+    if not oldColumns:
+        raise RuntimeError("runList1 not available in the new format")
     b=c.execute("select repnlength, repn, count(step), min(objective), max(trainacc), max(testacc) from runs r left join steps s on r.count=s.run group by count").fetchall()
     for j in b:
         print(j)
 
+def _listAttribs(wantRes):
+    c=con.cursor()
+    if wantRes is None:
+        a = c.execute("select distinct(name) from ATTRIBS").fetchall()
+    else:
+        a = c.execute("select distinct(name) from ATTRIBS where ISRESULT = ?", (wantRes,)).fetchall()
+    b=sorted([i[0] for i in a])
+    return b
+
+def _getAttribAsStr(run,name):
+    c=con.cursor()
+    a = c.execute("select value from ATTRIBS where run = ? and name = ?",(run,name)).fetchall()
+    for i in a:#there should only be one if there are any
+        return str(i[0])
+    return ""
+    
 #architectureLike: if set to 5, only print info for runs with the same network as the one used in run 5
-def runList2(avgLength=None, doPrint = True, runFrom=None, architectureLike=None): #with times
+#doAttribs: None means all attribs are included, a list means those attributes are included,
+#   True or False mean only the result or nonresult ones.
+def runList2(avgLength=None, doPrint = True, runFrom=None, architectureLike=None, doAttribs=None): #with times
+    attribs = doAttribs if type(doAttribs)==list else _listAttribs(doAttribs)
     if avgLength == None:
         avgLength = movingAvgLength
     c=con.cursor()
@@ -145,6 +193,8 @@ def runList2(avgLength=None, doPrint = True, runFrom=None, architectureLike=None
     archClause = ""
     masterQueryArgs = None
     if architectureLike is not None:
+        if not oldColumns:
+            raise RuntimeError("no architecture search with new format")
 #        architectureStr = c.execute("select architecture from runs where count = ?",(architectureLike,)).fetchone()[0]
 #        archClause = "where architecture = ?"
 #        masterQueryArgs = (architectureStr,)
@@ -153,7 +203,7 @@ def runList2(avgLength=None, doPrint = True, runFrom=None, architectureLike=None
         if runFrom is not None:
             archClause = archClause + " and count >= " + str(runFrom)
             runFrom = None
-    masterQuery = "select count, repnlength, repn, case when length(continuation)>0 then '+' else '' end || count(step), (select time from times where run = r.count) from runs r left join steps s on r.count=s.run %s group by count" % (archClause if runFrom is None else ("where count>= "+str(runFrom)))
+    masterQuery = "select count, "+("repnlength, repn," if oldColumns else "") +" case when length(continuation)>0 then '+' else '' end || count(step), (select time from times where run = r.count) from runs r left join steps s on r.count=s.run %s group by count" % (archClause if runFrom is None else ("where count>= "+str(runFrom)))
     if masterQueryArgs is None:
         bb=c.execute(masterQuery).fetchall()
     else:
@@ -161,10 +211,19 @@ def runList2(avgLength=None, doPrint = True, runFrom=None, architectureLike=None
     for rec in bb:
         values = c.execute("select objective,trainacc,testacc from steps where run=? order by step",(rec[0],))
         values = [i for i in values]
-        def avgs(idx): return movingAverage([i[idx] for i in values],False,avgLength) if len(values)>=avgLength else [None]
-        b.append(rec[:4] + (numpy.amin(avgs(0)),numpy.amax(avgs(1)),numpy.amax(avgs(2)),rec[4]))
+        def bestAvg(idx,highIsBad):
+            if len(values)<avgLength:
+                return None
+            s=replaceSeriesWithMovingAverage_([i[idx] for i in values],avgLength,highIsBad)
+            return (numpy.amin if highIsBad else numpy.amax)(s)
+        attribValues=tuple(_getAttribAsStr(rec[0],att) for att in attribs)
+        b.append(rec[:4] + (bestAvg(0,True),bestAvg(1,False),bestAvg(2,False))+attribValues)
     if doPrint:
-        print (tabulate.tabulate(b,headers=["","repLen","repn","steps","objective","trainAcc","testAcc","10StepTime"]))
+        if oldColumns:
+            headers=["","repLen","repn","steps","objective","trainAcc","testAcc","10StepTime"]+attribs
+        else:
+            headers=["",                "steps","objective","trainAcc","testAcc","10StepTime"]+attribs
+        print (tabulate.tabulate(b,headers=headers))
     else:
         return b
 
@@ -193,6 +252,15 @@ def diffRuns(x,y, pretty=1):
                 print (x1)
                 print (y1)
     dif = [(d[0],a,b) for (a,b,d) in zip(xx,yy,q.description) if (a!=b)]
+    xxx = [i for i in c.execute("select name,value from attribs where run = ?", (x,)).fetchall()]
+    yyy = [i for i in c.execute("select name,value from attribs where run = ?", (y,)).fetchall()]
+    labx= [k for k,v in xxx]
+    laby= [k for k,v in yyy]
+    dx=dict(xxx)
+    dy=dict(yyy)
+    shared=[i for i in labx if i in laby]
+    dif=(dif+[(i,dx[i],dy[i]) for i in shared if dx[i]!=dy[i]]+[(i,"",dy[i]) for i in laby if i not in shared]+
+         [(i,dx[i],"") for i in labx if i not in shared])
     print (tabulate.tabulate(dif))
 
 def describeRun(run):
@@ -206,7 +274,9 @@ def describeRun(run):
                 x1=printJSON_nicely(x1)
             pydoc.pager(x1)
     data = [(d[0],a) for a,d in zip(xx,q.description)]
-    print (tabulate.tabulate(data))
+    data2=c.execute("select name,value from attribs where run = ?", (run,)).fetchall()
+    print (tabulate.tabulate(data+[i for i in data2]))
+    
 
 def lastSteps(_pager=False, _rtn=False):
     c=con.cursor()
@@ -274,6 +344,7 @@ def deleteRun(run):
     c.execute("delete from STEPS where run = ?", (run,))
     c.execute("delete from TIMES where run = ?", (run,))
     c.execute("delete from RUNS where count = ?", (run,))
+    c.execute("delete from ATTRIBS where run = ?", (run,))
     con.commit()
 
 def _runToStr(run):
