@@ -16,6 +16,9 @@ This stores the reported training and test objective and accuracy from each step
 These are stored in the STEPS table.
 The time for the first 10 steps (excluding the first) is remembered in the steps table.
 
+#### `results.addResultAttribute`
+Stores a value of an attribute for the run, which must not have a value already.
+
 Similar functions are also available in lua after something like this.
 ```
 results = require 'results'

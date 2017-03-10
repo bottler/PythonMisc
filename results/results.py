@@ -157,9 +157,12 @@ def runList():
     print ( tabulate.tabulate([i for i in b],headers=["","","steps", "start","obj","trainAcc","testObj","testAcc","Bad"]) )
     #return a,b
 
+def _getUseOldColumns():
+    return oldColumns and c.execute("select sql like '%LAYERTYPE%' from sqlite_master where tbl_name='RUNS'").fetchone()[0]
+    
 def runList1():
     c=con.cursor()
-    if not oldColumns:
+    if not _getUseOldColumns():
         raise RuntimeError("runList1 not available in the new format")
     b=c.execute("select repnlength, repn, count(step), min(objective), max(trainacc), max(testacc) from runs r left join steps s on r.count=s.run group by count").fetchall()
     for j in b:
@@ -192,8 +195,9 @@ def runList2(avgLength=None, doPrint = True, runFrom=None, architectureLike=None
     b=[]
     archClause = ""
     masterQueryArgs = None
+    useOldColumns=_getUseOldColumns()
     if architectureLike is not None:
-        if not oldColumns:
+        if not useOldColumns:
             raise RuntimeError("no architecture search with new format")
 #        architectureStr = c.execute("select architecture from runs where count = ?",(architectureLike,)).fetchone()[0]
 #        archClause = "where architecture = ?"
@@ -203,7 +207,7 @@ def runList2(avgLength=None, doPrint = True, runFrom=None, architectureLike=None
         if runFrom is not None:
             archClause = archClause + " and count >= " + str(runFrom)
             runFrom = None
-    masterQuery = "select count, "+("repnlength, repn," if oldColumns else "") +" case when length(continuation)>0 then '+' else '' end || count(step), (select time from times where run = r.count) from runs r left join steps s on r.count=s.run %s group by count" % (archClause if runFrom is None else ("where count>= "+str(runFrom)))
+    masterQuery = "select count, "+("repnlength, repn," if useOldColumns else "") +" case when length(continuation)>0 then '+' else '' end || count(step), (select time from times where run = r.count) from runs r left join steps s on r.count=s.run %s group by count" % (archClause if runFrom is None else ("where count>= "+str(runFrom)))
     if masterQueryArgs is None:
         bb=c.execute(masterQuery).fetchall()
     else:
@@ -217,9 +221,9 @@ def runList2(avgLength=None, doPrint = True, runFrom=None, architectureLike=None
             s=replaceSeriesWithMovingAverage_([i[idx] for i in values],avgLength,highIsBad)
             return (numpy.amin if highIsBad else numpy.amax)(s)
         attribValues=tuple(_getAttribAsStr(rec[0],att) for att in attribs)
-        b.append(rec[:4] + (bestAvg(0,True),bestAvg(1,False),bestAvg(2,False))+attribValues)
+        b.append(rec[:-1] + (bestAvg(0,True),bestAvg(1,False),bestAvg(2,False),rec[-1])+attribValues)
     if doPrint:
-        if oldColumns:
+        if useOldColumns:
             headers=["","repLen","repn","steps","objective","trainAcc","testAcc","10StepTime"]+attribs
         else:
             headers=["",                "steps","objective","trainAcc","testAcc","10StepTime"]+attribs
