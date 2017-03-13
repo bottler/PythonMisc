@@ -158,7 +158,7 @@ def runList():
     #return a,b
 
 def _getUseOldColumns():
-    return oldColumns and c.execute("select sql like '%LAYERTYPE%' from sqlite_master where tbl_name='RUNS'").fetchone()[0]
+    return oldColumns and con.execute("select sql like '%LAYERTYPE%' from sqlite_master where tbl_name='RUNS'").fetchone()[0]
     
 def runList1():
     c=con.cursor()
