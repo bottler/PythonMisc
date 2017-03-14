@@ -50,7 +50,7 @@ def startRun(continuation, attribs, architecture, solver, callerFilePath):
     setup=["create table if not exists RUNS"+runColList,#these default keys start at 1
            "create table if not exists STEPS(STEP INTEGER PRIMARY KEY, RUN int, OBJECTIVE real, TRAINACC real, TESTOBJECTIVE real, TESTACC REAL )",
            "create table if not exists TIMES(RUN INT, TIME real)", # stores the time of the tenth step of each run, allowing speed to be measured
-           "create table if not exists ATTRIBS(RUN INT, NAME TEXT, ISRESULT INT, VALUE TEXT)"
+           "create table if not exists ATTRIBS(RUN INT, NAME TEXT, ISRESULT INT, VALUE)" #value deliberately has no affinity. some are numbers
        ]
     infoquery = "insert into RUNS (CONTINUATION, ARCHITECTURE, SOLVER, CODE) VALUES (?,?,?,?)"
     info = (continuation, architecture, solver, filecontents)
@@ -185,10 +185,18 @@ def _getAttribAsStr(run,name):
     return ""
     
 #architectureLike: if set to 5, only print info for runs with the same network as the one used in run 5
-#doAttribs: None means all attribs are included, a list means those attributes are included,
+#doAttribs: None means all attribs are included, a list of strings means those attributes are included,
+#   a list containing a list of strings means those attributes are excluded
 #   True or False mean only the result or nonresult ones.
-def runList2(avgLength=None, doPrint = True, runFrom=None, architectureLike=None, doAttribs=None): #with times
-    attribs = doAttribs if type(doAttribs)==list else _listAttribs(doAttribs)
+defaultAttribs = None
+def runList2(avgLength=None, doPrint = True, runFrom=None, architectureLike=None, doAttribs=defaultAttribs): #with times
+    if type(doAttribs)==list:
+        if len(doAttribs)==1 and type(doAttribs[0]==list):
+            attribs = [i for i in _listAttribs(None) if i not in doAttribs[0]]
+        else:
+            attribs = doAttribs
+    else:
+        attribs =  _listAttribs(doAttribs)
     if avgLength == None:
         avgLength = movingAvgLength
     c=con.cursor()

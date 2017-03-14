@@ -17,7 +17,7 @@ runColList="(COUNT INTEGER PRIMARY KEY, TIME TEXT DEFAULT CURRENT_TIMESTAMP NOT 
 setup=["create table if not exists RUNS"+runColList,#these default keys start at 1
        "create table if not exists STEPS(STEP INTEGER PRIMARY KEY, RUN int, OBJECTIVE real, TRAINACC real, TESTOBJECTIVE real, TESTACC REAL )",
        "create table if not exists TIMES(RUN INT, TIME real)", # stores the time of the tenth step of each run, allowing speed to be measured
-       "create table if not exists ATTRIBS(RUN INT, NAME TEXT, ISRESULT INT, VALUE TEXT)"
+       "create table if not exists ATTRIBS(RUN INT, NAME TEXT, ISRESULT INT, VALUE)"
        ]
 for s in setup:
     c.execute(s)

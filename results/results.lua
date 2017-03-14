@@ -78,7 +78,7 @@ function results.startRun(continuation, attribs, architecture, solver, callerFil
    local setup="create table if not exists RUNS" .. runColList .. [[;
       create table if not exists STEPS(STEP INTEGER PRIMARY KEY, RUN int, OBJECTIVE real, TRAINACC real, TESTOBJECTIVE real, TESTACC REAL );
       create table if not exists TIMES(RUN INT, TIME real);
-      create table if not exists ATTRIBS(RUN INT, NAME TEXT, ISRESULT INT, VALUE TEXT)
+      create table if not exists ATTRIBS(RUN INT, NAME TEXT, ISRESULT INT, VALUE)
    ]]
    check(con:exec(setup))
    local infoquery = "insert into RUNS (CONTINUATION, ARCHITECTURE, SOLVER, CODE) VALUES (?,?,?,?)"
