@@ -11,4 +11,6 @@ Some fairly standalone python scripts
 
 * tinisDummyProgram: a demo program for tinisMultiRun
 
+* marks: db for marking a task - assign marks for bits of the task to candidates, get stats. Designed to be called by other parts of the marking process, but also usable interactively.
+
 * results: code for managing results of long neural network training runs
