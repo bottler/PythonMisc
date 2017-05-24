@@ -14,7 +14,7 @@ from six import print_
 #candidates can either be specified by candidate number or a string consisting of the candidate number followed by "d".
 
 file = "marks.sqlite"
-if os.environ.has_key("MARKS_FILE"):
+if "MARKS_FILE" in os.environ:
     file = os.environ["MARKS_FILE"]
 
 con = sqlite3.connect(file)
