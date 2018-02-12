@@ -3,6 +3,8 @@ Some fairly standalone python scripts
 
 * crank_nicholson: basic Crank-Nicholson solver for a parabolic PDE on an interval
 
+* european_option: demonstrates valuing an option using crank_nicholson
+
 * readSketchnet: tool to read data from the sketch-a-net dataset http://cybertron.cg.tu-berlin.de/eitz/projects/classifysketch/
 
 * oncampus: Should graphs be sent from a warwick computer to the screen or a file.
