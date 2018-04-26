@@ -5,7 +5,7 @@ Some fairly standalone python scripts
 
 * european_option: demonstrates valuing an option using crank_nicholson
 
-* readSketchnet: tool to read data from the sketch-a-net dataset http://cybertron.cg.tu-berlin.de/eitz/projects/classifysketch/
+* readSketchnet: tool to read data from TU-Berlin-Sketch dataset http://cybertron.cg.tu-berlin.de/eitz/projects/classifysketch/
 
 * oncampus: Should graphs be sent from a warwick computer to the screen or a file.
 

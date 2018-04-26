@@ -1,5 +1,5 @@
 #This file contains just enough logic to get data from the
-#sketchnet svg files as points-on-paths
+#TU-Berlin-Sketch svg files as points-on-paths
 
 #info
 #http://www.johndcook.com/blog/2009/12/21/bezier-basics/
