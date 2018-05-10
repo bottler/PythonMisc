@@ -1,5 +1,5 @@
 import sqlite3
-import os, tabulate, numpy
+import os, tabulate, numpy, six
 from six import print_
 
 #Jeremy Reizenstein 2016
@@ -39,7 +39,7 @@ def _getMark(markType, candidate):#candidate must be int
     return i[0][0]
    
 def truncate(s, n=10):
-    if (str==type(s) or unicode == type(s)) and len(s)>n:
+    if isinstance(s,six.string_types) and len(s)>n:
         return s[:n]
     return s
 
@@ -201,7 +201,7 @@ def writeSummary():
                     print_(markType,": ",_getMark(markType,candidate),"/", outofs[markType],file=f,sep="")
                 else:
                     res = _getMark(markType,candidate)
-                    if(len(unicode(res))>1):
+                    if(len(six.text_type(res))>1):
                         
                         p(markType)
                         p(res.encode("iso-8859-1"))
