@@ -67,7 +67,7 @@ def getRowColumnPermutations(partition):
     each_col_permutation = [list(symmetric(i)) for i in conjugatePartition(partition)]
     return each_row_permutation,each_col_permutation
     
-#If tableau is a standard young tableau (which this function does
+#If tableau is a Young tableau (which this function does
 #not check) then
 #return the corresponding young symmetrizer (a signed list of permutations)
 #as a list of tuples
